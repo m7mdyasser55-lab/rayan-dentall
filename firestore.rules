@@ -1,0 +1,77 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() { return request.auth != null; }
+    function isAdmin() { 
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) || 
+        (request.auth.token.email == 'm7mdyasser55@gmail.com' && request.auth.token.email_verified == true)
+      ); 
+    }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+
+    // --- Categories ---
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // --- Appointments ---
+    match /appointments/{appointmentId} {
+      allow create: if isValidAppointment(incoming()) 
+                     && incoming().status == 'pending'
+                     && incoming().createdAt == request.time
+                     && incoming().updatedAt == request.time;
+      
+      allow get: if isAdmin() || (isSignedIn() && existing().userId == request.auth.uid);
+      allow list: if isAdmin();
+      
+      allow update: if (isAdmin() || (isSignedIn() && existing().userId == request.auth.uid))
+                    && isValidId(appointmentId)
+                    && isValidAppointment(incoming())
+                    && incoming().createdAt == existing().createdAt
+                    && incoming().updatedAt == request.time
+                    && (
+                      // Action: Status Update (Admin only)
+                      (isAdmin() && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])) ||
+                      // Action: Patient self-cancel
+                      (isSignedIn() && existing().userId == request.auth.uid && incoming().status == 'cancelled' && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']))
+                    );
+
+      allow delete: if isAdmin();
+    }
+
+    // --- Admins ---
+    match /admins/{userId} {
+      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      // Admin creation is typically manual or via a bootstrapped process.
+      // For this app, we only allow existing admins to manage other admins.
+      allow write: if isAdmin();
+    }
+
+    // --- Gallery ---
+    match /gallery/{imageId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // --- Validation Helpers ---
+    function isValidAppointment(data) {
+      return data.keys().hasAll(['patientName', 'patientPhone', 'categoryId', 'date', 'status', 'createdAt', 'updatedAt'])
+        && data.patientName is string && data.patientName.size() > 0 && data.patientName.size() <= 100
+        && data.patientPhone is string && data.patientPhone.size() >= 8 && data.patientPhone.size() <= 20
+        && data.categoryId is string && data.categoryId.size() <= 50
+        && data.date is string // simplified for now, format check hard in CE rules
+        && data.status in ['pending', 'confirmed', 'cancelled', 'completed']
+        && (data.userId == null || data.userId is string);
+    }
+  }
+}

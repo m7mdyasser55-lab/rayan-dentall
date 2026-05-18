@@ -1,0 +1,6 @@
+{
+  "name": "Rayan Dental Care",
+  "description": "Premium dental clinic in Alexandria with an AI-powered assistant to help you with your oral health needs.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

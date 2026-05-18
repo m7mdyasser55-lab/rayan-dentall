@@ -1,0 +1,61 @@
+{
+  "entities": {
+    "Category": {
+      "title": "Dental Category",
+      "description": "A type of dental service offered by the clinic.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Category name in English" },
+        "nameAr": { "type": "string", "description": "Category name in Arabic" },
+        "icon": { "type": "string", "description": "Lucide icon name" }
+      },
+      "required": ["name", "nameAr"]
+    },
+    "Appointment": {
+      "title": "Appointment",
+      "description": "A booking request from a patient.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "UID of the user who booked (if signed in)" },
+        "patientName": { "type": "string", "description": "Full name of the patient" },
+        "patientPhone": { "type": "string", "description": "Phone number of the patient" },
+        "categoryId": { "type": "string", "description": "Reference to the selected category" },
+        "categoryName": { "type": "string", "description": "Name of the category for quick display" },
+        "date": { "type": "string", "format": "date", "description": "Preferred date" },
+        "time": { "type": "string", "description": "Preferred time slot" },
+        "status": { 
+          "type": "string", 
+          "enum": ["pending", "confirmed", "cancelled", "completed"],
+          "description": "Status of the appointment" 
+        },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["patientName", "patientPhone", "categoryId", "date", "status", "createdAt", "updatedAt"]
+    },
+    "Admin": {
+      "title": "Admin",
+      "description": "User with administrative privileges.",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["superadmin", "editor"] }
+      },
+      "required": ["email", "role"]
+    }
+  },
+  "firestore": {
+    "/categories/{categoryId}": {
+      "schema": "Category",
+      "description": "List of available dental services."
+    },
+    "/appointments/{appointmentId}": {
+      "schema": "Appointment",
+      "description": "Patient appointment requests."
+    },
+    "/admins/{userId}": {
+      "schema": "Admin",
+      "description": "Registry of authorized clinic administrators."
+    }
+  }
+}
